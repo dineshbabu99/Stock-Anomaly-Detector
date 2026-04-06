@@ -127,7 +127,7 @@ wss.on("connection", (ws, req) => {
     ws.close(1008, "Unauthorized"); 
     return;
    }
-let watchList = new Set(symbols.slice(0, 50)); // default first 50
+let watchList = new Set(symbols.slice(0, 50));
 ws.on("message", (raw) => {
   try {
     const msg = JSON.parse(raw);

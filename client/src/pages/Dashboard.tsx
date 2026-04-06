@@ -27,19 +27,19 @@ function Dashboard() {
 
 
 
-const limit = 10;
+  const limit = 10;
 
-const wsRef = useRef<WebSocket | null>(null);
-const symbolsRef = useRef<string[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
+  const symbolsRef = useRef<string[]>([]);
 
-const paginatedSymbols = useMemo(() => {
-  const start = (page - 1) * limit;
-  return allSymbols.slice(start, start + limit);
-}, [page, allSymbols]);
+  const paginatedSymbols = useMemo(() => {
+    const start = (page - 1) * limit;
+    return allSymbols.slice(start, start + limit);
+  }, [page, allSymbols]);
 
-useEffect(() => {
-  symbolsRef.current = paginatedSymbols;
-}, [paginatedSymbols]);
+  useEffect(() => {
+    symbolsRef.current = paginatedSymbols;
+  }, [paginatedSymbols]);
 
   const handleUpdateAlert = (symbol: string, alert: any) => {
     setStocks(prev =>
@@ -49,7 +49,7 @@ useEffect(() => {
     );
   };
   useEffect(() => {
-   
+
     let reconnectTimer: any;
     let retry = 0;
 
@@ -64,7 +64,7 @@ useEffect(() => {
 
       wsRef.current.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-
+        console.log(msg)
         if (msg.type === "ALERT") {
           console.log(msg.type)
           const alertFromBackend = msg.data;
@@ -90,12 +90,12 @@ useEffect(() => {
 
         if (msg.type === "PRICE_UPDATE") {
           const list: Stock[] = msg.data;
-// console.log(paginatedSymbols)
-      const filtered = list.filter(stock =>
-symbolsRef.current.includes(stock.symbol)
-  );
+          // console.log(paginatedSymbols)
+          const filtered = list.filter(stock =>
+            symbolsRef.current.includes(stock.symbol)
+          );
 
-  setStocks(filtered);
+          setStocks(filtered);
           const focusedStocks = list;
 
           setHistoryMap(prev => {
@@ -112,7 +112,7 @@ symbolsRef.current.includes(stock.symbol)
                   t: Date.now(),
                   price: stock.price
                 }
-              ].slice(-60); 
+              ].slice(-60);
             });
 
             return updated;
@@ -133,7 +133,7 @@ symbolsRef.current.includes(stock.symbol)
         wsRef.current?.close();
       };
 
-   
+
     };
 
     connect();
@@ -141,30 +141,30 @@ symbolsRef.current.includes(stock.symbol)
 
 
     return () => {
-   if (wsRef.current?.readyState === WebSocket.OPEN) {
-    wsRef.current.close();
-  }
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
       clearTimeout(reconnectTimer);
     };
   }, []);
 
-useEffect(() => {
-if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+  useEffect(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
 
-  wsRef.current?.send(JSON.stringify({
-    type: "WATCH",
-    symbols: paginatedSymbols
-  }));
-}, [page, paginatedSymbols, isconnected]);
+    wsRef.current?.send(JSON.stringify({
+      type: "WATCH",
+      symbols: paginatedSymbols
+    }));
+  }, [page, paginatedSymbols, isconnected]);
 
 
-useEffect(() => {
-  fetch("http://localhost:4000/stocks?page=1&limit=1000")
-    .then(res => res.json())
-    .then(data => {
-      setAllSymbols(data.data.map((s: any) => s.symbol));
-    });
-}, []);
+  useEffect(() => {
+    fetch("http://localhost:4000/stocks?page=1&limit=1000")
+      .then(res => res.json())
+      .then(data => {
+        setAllSymbols(data.data.map((s: any) => s.symbol));
+      });
+  }, []);
 
 
   return (
@@ -176,24 +176,24 @@ useEffect(() => {
         </div>
       </header>
 
-  <div className="status-bar">
-      <div className="status-left">
-        <span className={`dot ${isconnected ? 'green' : 'red'}`} />
-        <span>{isconnected ? 'LIVE' : 'RECONNECTING'}</span>
+      <div className="status-bar">
+        <div className="status-left">
+          <span className={`dot ${isconnected ? 'green' : 'red'}`} />
+          <span>{isconnected ? 'LIVE' : 'RECONNECTING'}</span>
 
+        </div>
       </div>
-      </div>
-      
+
       <div className="main-layout">
         <div className="left-pane">
-         <ListStocks
-  stocks={stocks}
-  onUpdateAlert={handleUpdateAlert}
-  onSelectStock={setSelectedSymbol}
-  page={page}
-  setPage={setPage}
-    total={allSymbols.length}
-/>
+          <ListStocks
+            stocks={stocks}
+            onUpdateAlert={handleUpdateAlert}
+            onSelectStock={setSelectedSymbol}
+            page={page}
+            setPage={setPage}
+            total={allSymbols.length}
+          />
           <FocusChart symbol={selectedSymbol} history={historyMap[selectedSymbol] || []} alerts={alerts} />
         </div>
 
@@ -203,7 +203,7 @@ useEffect(() => {
             onClear={() => setAlerts([])}
           />
         </div>
-         <style>{`
+        <style>{`
         .status-bar {
           display: flex;
           align-items: center;

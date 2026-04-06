@@ -27,7 +27,6 @@ function FocusChart({ symbol, history, alerts }: FocusChartProps) {
     }));
   }, [history, alerts, symbol]);
 
-  const symbolAlerts = alerts.filter(a => a.symbol === symbol).slice(0, 3);
 
   const domain = useMemo(() => {
     if (!data.length) return ['auto', 'auto'];
