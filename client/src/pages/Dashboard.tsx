@@ -1,7 +1,7 @@
 import AlertFeed from "../components/AlertFeed";
 import FocusChart from "../components/FocusChart";
 import ListStocks from "../components/ListStocks";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 
 function Dashboard() {
@@ -19,7 +19,27 @@ function Dashboard() {
   const [stocks, setStocks] = useState<any[]>([]);
   const [isconnected, setIsConnected] = useState(false);
   const [historyMap, setHistoryMap] = useState<Record<string, any[]>>({});
-  const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
+  const [selectedSymbol, setSelectedSymbol] = useState("TAA");
+  const [allSymbols, setAllSymbols] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+
+
+
+
+
+const limit = 10;
+
+const wsRef = useRef<WebSocket | null>(null);
+const symbolsRef = useRef<string[]>([]);
+
+const paginatedSymbols = useMemo(() => {
+  const start = (page - 1) * limit;
+  return allSymbols.slice(start, start + limit);
+}, [page, allSymbols]);
+
+useEffect(() => {
+  symbolsRef.current = paginatedSymbols;
+}, [paginatedSymbols]);
 
   const handleUpdateAlert = (symbol: string, alert: any) => {
     setStocks(prev =>
@@ -29,23 +49,24 @@ function Dashboard() {
     );
   };
   useEffect(() => {
-    let ws: WebSocket;
+   
     let reconnectTimer: any;
     let retry = 0;
 
     const connect = () => {
-      ws = new WebSocket(
+      wsRef.current = new WebSocket(
         "ws://localhost:4000/stocks?token=dinesh-key-123"
       );
-      ws.onopen = () => {
+      wsRef.current.onopen = () => {
         retry = 0;
         setIsConnected(true);
       };
 
-      ws.onmessage = (event) => {
+      wsRef.current.onmessage = (event) => {
         const msg = JSON.parse(event.data);
 
         if (msg.type === "ALERT") {
+          console.log(msg.type)
           const alertFromBackend = msg.data;
           const newAlert = {
             symbol: alertFromBackend.symbol,
@@ -69,20 +90,12 @@ function Dashboard() {
 
         if (msg.type === "PRICE_UPDATE") {
           const list: Stock[] = msg.data;
+// console.log(paginatedSymbols)
+      const filtered = list.filter(stock =>
+symbolsRef.current.includes(stock.symbol)
+  );
 
-          setStocks(prev => {
-            const map = new Map(prev.map(s => [s.symbol, s]));
-
-            list.forEach((newStock) => {
-              map.set(newStock.symbol, {
-                ...map.get(newStock.symbol),
-                ...newStock,
-                alert: newStock.alert || null
-              });
-            });
-
-            return Array.from(map.values());
-          });
+  setStocks(filtered);
           const focusedStocks = list;
 
           setHistoryMap(prev => {
@@ -107,7 +120,7 @@ function Dashboard() {
         }
       };
 
-      ws.onclose = () => {
+      wsRef.current.onclose = () => {
         setIsConnected(false);
 
         const delay = Math.min(2000 * (retry + 1), 10000);
@@ -116,20 +129,42 @@ function Dashboard() {
         reconnectTimer = setTimeout(connect, delay);
       };
 
-      ws.onerror = () => {
-        ws.close();
+      wsRef.current.onerror = () => {
+        wsRef.current?.close();
       };
+
+   
     };
 
     connect();
 
 
+
     return () => {
-      ws?.close();
+   if (wsRef.current?.readyState === WebSocket.OPEN) {
+    wsRef.current.close();
+  }
       clearTimeout(reconnectTimer);
     };
   }, []);
 
+useEffect(() => {
+if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+
+  wsRef.current?.send(JSON.stringify({
+    type: "WATCH",
+    symbols: paginatedSymbols
+  }));
+}, [page, paginatedSymbols, isconnected]);
+
+
+useEffect(() => {
+  fetch("http://localhost:4000/stocks?page=1&limit=1000")
+    .then(res => res.json())
+    .then(data => {
+      setAllSymbols(data.data.map((s: any) => s.symbol));
+    });
+}, []);
 
 
   return (
@@ -151,11 +186,14 @@ function Dashboard() {
       
       <div className="main-layout">
         <div className="left-pane">
-          <ListStocks
-            stocks={stocks}
-            onUpdateAlert={handleUpdateAlert}
-            onSelectStock={setSelectedSymbol}
-          />
+         <ListStocks
+  stocks={stocks}
+  onUpdateAlert={handleUpdateAlert}
+  onSelectStock={setSelectedSymbol}
+  page={page}
+  setPage={setPage}
+    total={allSymbols.length}
+/>
           <FocusChart symbol={selectedSymbol} history={historyMap[selectedSymbol] || []} alerts={alerts} />
         </div>
 

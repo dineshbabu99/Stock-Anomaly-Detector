@@ -10,6 +10,7 @@ type FocusChartProps = {
 }
 
 function FocusChart({ symbol, history, alerts }: FocusChartProps) {
+  // console.log(symbol)
   const data = useMemo(() => {
     if (!history?.length) return [];
 

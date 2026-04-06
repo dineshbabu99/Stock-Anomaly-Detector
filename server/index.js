@@ -3,7 +3,6 @@ const cors = require("cors");
 const http = require("http");
 const WebSocket = require("ws");
 const stocks = require("./config");
-const { type } = require("os");
 
 const app = express();
 
@@ -15,7 +14,8 @@ app.use(express.json());
 
 const PORT = 4000;
 
-const symbols = ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'TSLA'];
+const symbols = stocks.map(stock => stock.symbol);
+
 
 const priceHistory = {};
 const lastAlertTime = {};
@@ -26,8 +26,20 @@ let alertID = 1;
 
 
 app.get("/stocks", (req, res) => {
-  res.json(stocks);
+  const page  = parseInt(req.query.page)  || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const sector = req.query.sector;
+
+  let filtered = sector
+    ? stocks.filter(s => s.sector === sector)
+    : stocks;
+
+  const total = filtered.length;
+  const data  = filtered.slice((page - 1) * limit, page * limit);
+
+  res.json({ total, page, limit, data });
 });
+
 
 app.get("/alerts", (req, res) => {
   // console.log("Current alerts queue:", alertsQueue);
@@ -90,7 +102,11 @@ app.delete("/stocks/:symbol/alert", (req, res) => {
   stock.alert = null;
   delete alertsConfig[symbol];
   delete priceHistory[symbol];
-  delete lastAlertTime[symbol];
+
+Object.keys(lastAlertTime)
+  .filter(k => k.startsWith(`${symbol}:`))
+  .forEach(k => delete lastAlertTime[k]);
+
 
   res.json({
     message: "Alert removed successfully",
@@ -107,36 +123,49 @@ wss.on("connection", (ws, req) => {
   const url = new URL(req.url, "http://localhost");
   const token = url.searchParams.get("token");
 
-  if (token !== "dinesh-key-123") {
-    ws.close();
+  if (token !== "dinesh-key-123") { 
+    ws.close(1008, "Unauthorized"); 
     return;
+   }
+let watchList = new Set(symbols.slice(0, 50)); // default first 50
+ws.on("message", (raw) => {
+  try {
+    const msg = JSON.parse(raw);
+    if (msg.type === "WATCH") {
+      watchList = new Set(msg.symbols);
+    }
+  } catch (e) {
+    console.error("Invalid message:", e.message);
   }
-
+});
 
   const interval = setInterval(() => {
-    const data = symbols.map(symbol => {
-      let change = (Math.random() * 10 - 5);
+  const watchedSymbols = Array.from(watchList);
 
-      if (Math.random() > 0.95) {
-        change = (Math.random() * 40 - 20);
-      }
-      const oldPrice = priceStore[symbol] || (Math.random() * 3000 + 100);
+const data = watchedSymbols.map(symbol => {
+  let change = (Math.random() * 10 - 5);
 
-      const newPrice = +(oldPrice * (1 + change / 100)).toFixed(2);
+  if (Math.random() > 0.95) {
+    change = (Math.random() * 40 - 20);
+  }
 
-      priceStore[symbol] = newPrice;
+  const oldPrice = priceStore[symbol] || (Math.random() * 3000 + 100);
+  const newPrice = +(oldPrice * (1 + change / 100)).toFixed(2);
 
+  priceStore[symbol] = newPrice;
 
-
-      return {
-        symbol,
-        price: newPrice,
-        timestamp: new Date()
-      };
-    });
+  return {
+    symbol,
+    price: newPrice,
+    timestamp: new Date()
+  };
+});
     data.forEach((liveStock) => {
-      const stock = stocks.find(s => s.symbol === liveStock.symbol);
-      if (!stock) return;
+const stockMap = Object.fromEntries(
+  stocks.map(s => [s.symbol, s])
+);   
+const stock = stockMap[liveStock.symbol];
+   if (!stock) return;
       if (!priceHistory[stock.symbol]) {
         priceHistory[stock.symbol] = [];
       }
@@ -159,7 +188,7 @@ wss.on("connection", (ws, req) => {
       // console.log(alertsConfig);
 
       const alertResult = checkAlert(config, priceHistory[stock.symbol]);
-
+if (!alertsConfig[stock.symbol]) return;
       if (alertResult) {
         const now = Date.now();
 
@@ -193,9 +222,8 @@ wss.on("connection", (ws, req) => {
             timestamp: new Date().toISOString()
           });
 
-          if (alertsQueue.length > 10) {
-            alertsQueue.shift();
-          }
+        const ALERT_QUEUE_SIZE = 1000;
+if (alertsQueue.length > ALERT_QUEUE_SIZE) alertsQueue.shift();
 
 
           ws.send(JSON.stringify({
@@ -215,16 +243,19 @@ wss.on("connection", (ws, req) => {
         }
       }
     });
+    
+const filteredStocks = stocks
+  .filter(stock => watchList.has(stock.symbol))
+  .map(stock => ({
+    ...stock,
+    alert: alertsConfig[stock.symbol] || null
+  }));
 
+ws.send(JSON.stringify({
+  type: "PRICE_UPDATE",
+  data: filteredStocks
+}));
 
-
-    ws.send(JSON.stringify({
-      type: "PRICE_UPDATE",
-      data: stocks.map(stock => ({
-        ...stock,
-        alert: alertsConfig[stock.symbol] || null
-      }))
-    }));
 
   }, 2000);
 

@@ -26,11 +26,23 @@ type Props = {
   stocks: Stock[];
   onUpdateAlert: (symbol: string, alert: Alert | null) => void;
   onSelectStock: (symbol: string) => void;
+  page: number;
+  setPage: React.Dispatch<React.SetStateAction<number>>;
+   total: number;
 };
 
-const ListStocks = ({ stocks, onUpdateAlert, onSelectStock }: Props) => {
+
+
+
+
+const ListStocks = ({ stocks, onUpdateAlert, onSelectStock, page, setPage, total }: Props) => {
   const [editingStock, setEditingStock] = useState<string | null>(null);
   const [tempAlert, setTempAlert] = useState<Alert | null>(null);
+
+
+const totalPages = Math.ceil(total / 10);
+
+
 
   const handleRemove = async (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent row click triggering onSelectStock
@@ -117,9 +129,23 @@ const ListStocks = ({ stocks, onUpdateAlert, onSelectStock }: Props) => {
               </td>
             </tr>
           ))}
+        
         </tbody>
+        
       </table>
+<div style={{ marginTop: "10px" }}>
+  <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+    Prev
+  </button>
 
+  <span style={{ margin: "0 10px" }}>
+    Page {page} / {totalPages}
+  </span>
+
+  <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+    Next
+  </button>
+</div>
       {editingStock && tempAlert && (
         <div className="edit-box">
           <h3>Edit Alert — {editingStock}</h3>
