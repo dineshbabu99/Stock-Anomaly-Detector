@@ -116,7 +116,7 @@ function AlertRow({ alert, isNew }: AlertRowProps) {
       'var(--blue)';
 
   return (
-    <div className={`alert-row`}>
+    <div className={`alert-row ${isNew ? 'is-new' : ''}`}>
       <div className="alert-row-left">
         <span className="alert-symbol">{alert.symbol}</span>
         <span className="alert-strat" style={{ color: strategyColor, borderColor: strategyColor }}>
