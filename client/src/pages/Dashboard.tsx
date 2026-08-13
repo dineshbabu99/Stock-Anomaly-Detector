@@ -55,7 +55,7 @@ function Dashboard() {
 
     const connect = () => {
       wsRef.current = new WebSocket(
-        "ws://localhost:4000/stocks?token=dinesh-key-123"
+        "wss://stock-anomaly-detector-xzc4.onrender.com/stocks?token=dinesh-key-123"
       );
       wsRef.current.onopen = () => {
         retry = 0;
@@ -159,7 +159,7 @@ function Dashboard() {
 
 
   useEffect(() => {
-    fetch("http://localhost:4000/stocks?page=1&limit=1000")
+    fetch("https://stock-anomaly-detector-xzc4.onrender.com/stocks?page=1&limit=1000")
       .then(res => res.json())
       .then(data => {
         setAllSymbols(data.data.map((s: any) => s.symbol));

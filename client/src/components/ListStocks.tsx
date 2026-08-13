@@ -47,7 +47,7 @@ const totalPages = Math.ceil(total / 10);
   const handleRemove = async (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent row click triggering onSelectStock
     try {
-      await axios.delete(`http://localhost:4000/stocks/${symbol}/alert`);
+      await axios.delete(`https://stock-anomaly-detector-xzc4.onrender.com/stocks/${symbol}/alert`);
       onUpdateAlert(symbol, null);
       if (editingStock === symbol) {
         setEditingStock(null);
@@ -78,7 +78,7 @@ const totalPages = Math.ceil(total / 10);
   const handleSave = async () => {
     if (!tempAlert || !editingStock) return;
     try {
-      await axios.put(`http://localhost:4000/stocks/${editingStock}/alert`, tempAlert);
+      await axios.put(`https://stock-anomaly-detector-xzc4.onrender.com/stocks/${editingStock}/alert`, tempAlert);
       onUpdateAlert(editingStock, tempAlert);
       setEditingStock(null);
       setTempAlert(null);
