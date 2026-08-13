@@ -7,12 +7,12 @@ const stocks = require("./config");
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:3000"
+  origin: ["http://localhost:3000", "http://localhost:5173", "https://stockanomaly.netlify.app"]
 }));
 
 app.use(express.json());
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
 const symbols = stocks.map(stock => stock.symbol);
 
